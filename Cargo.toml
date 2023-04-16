@@ -1,5 +1,5 @@
 [package]
-name = "wr4"
+name = "gjdgjg"
 version = "0.1.0"
 edition = "2021"
 
@@ -17,3 +17,5 @@ assert_hex = "0.2.2"
 ringbuf = "0.2"
 cpal = "0.13.5"
 anyhow = "1.0.12"
+
+bytemuck = "1.13.1"

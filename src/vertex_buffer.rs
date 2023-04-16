@@ -1,16 +1,11 @@
 use crate::math::*;
 
+#[derive(Default)]
 pub struct VertexBuffer {
     pub buf: Vec<u8>,
 }
 
 impl VertexBuffer {
-    pub fn new() -> VertexBuffer {
-        VertexBuffer {
-            buf: Vec::new(),
-        }
-    }
-
     fn put_u32(&mut self, x: u32) {
         for b in x.to_le_bytes() {
             self.buf.push(b);
@@ -40,15 +35,33 @@ impl VertexBuffer {
         self.put_vertex(v3(p2.x, p2.y, depth), uv2, colour, mode);
         self.put_vertex(v3(p3.x, p3.y, depth), uv3, colour, mode);
     }
+    pub fn put_triangle_transform(&mut self, p1: V2, uv1: V2, p2: V2, uv2: V2, p3: V2, uv3: V2, depth: f32, colour: V4, mode: u32, tmat: &[f32; 9]) {
+        let p1t = p1.homogeneous_transform(tmat);
+        let p2t = p2.homogeneous_transform(tmat);
+        let p3t = p3.homogeneous_transform(tmat);
+        self.put_triangle(p1t, uv1, p2t, uv2, p3t, uv3, depth, colour, mode)
+    }
+        
     // 4 is top left
     pub fn put_quad(&mut self, p1: V2, uv1: V2, p2: V2, uv2: V2, p3: V2, uv3: V2, p4: V2, uv4: V2, depth: f32, colour: V4, mode: u32) {
         self.put_triangle(p1, uv1, p2, uv2, p3, uv3, depth, colour, mode);
         self.put_triangle(p3, uv3, p4, uv4, p1, uv1, depth, colour, mode);
     }
+    pub fn put_quad_transform(&mut self, p1: V2, uv1: V2, p2: V2, uv2: V2, p3: V2, uv3: V2, p4: V2, uv4: V2, depth: f32, colour: V4, mode: u32, tmat: &[f32; 9]) {
+        let p1t = p1.homogeneous_transform(tmat);
+        let p2t = p2.homogeneous_transform(tmat);
+        let p3t = p3.homogeneous_transform(tmat);
+        let p4t = p4.homogeneous_transform(tmat);
+        self.put_quad(p1t, uv1, p2t, uv2, p3t, uv3, p4t, uv4, depth, colour, mode)
+    }
 
     pub fn put_rect(&mut self, r: V4, r_uv: V4, depth: f32, colour: V4, mode: u32) {
         self.put_triangle(r.tl(), r_uv.tl(), r.tr(), r_uv.tr(), r.bl(), r_uv.bl(), depth, colour, mode);
         self.put_triangle(r.bl(), r_uv.bl(), r.tr(), r_uv.tr(), r.br(), r_uv.br(), depth, colour, mode);
+    }
+    pub fn put_rect_transform(&mut self, r: V4, r_uv: V4, depth: f32, colour: V4, mode: u32, tmat: &[f32; 9]) {
+        self.put_triangle_transform(r.tl(), r_uv.tl(), r.tr(), r_uv.tr(), r.bl(), r_uv.bl(), depth, colour, mode, tmat);
+        self.put_triangle_transform(r.bl(), r_uv.bl(), r.tr(), r_uv.tr(), r.br(), r_uv.br(), depth, colour, mode, tmat);
     }
 
     pub fn put_rect_flipx(&mut self, r: V4, r_uv: V4, depth: f32, colour: V4, mode: u32) {

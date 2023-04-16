@@ -108,6 +108,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0d261e256854913907f67ed06efbc3338dfe6179796deefc1ff763fc1aee5535"
 
 [[package]]
+name = "bytemuck"
+version = "1.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "17febce684fd15d89027105661fec94afb475cb995fbc59d2865198446ba2eea"
+
+[[package]]
 name = "bytes"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -468,6 +474,22 @@ name = "fuchsia-cprng"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a06f77d526c1a601b7c4cdd98f54b5eaabffc14d5f2f0296febdc7f357c6d3ba"
+
+[[package]]
+name = "gjdgjg"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "assert_hex",
+ "bytemuck",
+ "cpal",
+ "glow",
+ "glutin",
+ "palette",
+ "png",
+ "ringbuf",
+ "winit",
+]
 
 [[package]]
 name = "gl_generator"
@@ -1834,21 +1856,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ae8970b36c66498d8ff1d66685dc86b91b29db0c7739899012f63a63814b4b28"
 dependencies = [
  "memchr",
-]
-
-[[package]]
-name = "wr4"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "assert_hex",
- "cpal",
- "glow",
- "glutin",
- "palette",
- "png",
- "ringbuf",
- "winit",
 ]
 
 [[package]]

@@ -12,6 +12,45 @@ out vec4 frag_colour;
 uniform sampler2D tex;
 uniform float time;
 
+float sdSegmentY(vec2 p, float h) {
+  float d = length(max(vec2(abs(p.x), p.y - h), 0.0)) + min(max(p.x, p.y - h), 0.0);
+  return (p.y > h || p.y < 0.0) ? length(vec2(p.x, p.y - h)) :
+                                   d;
+}
+
+
+float sdSegment( in vec2 p, in vec2 a, in vec2 b )
+{
+    vec2 pa = p-a, ba = b-a;
+    float h = clamp( dot(pa,ba)/dot(ba,ba), 0.0, 1.0 );
+    return length( pa - ba*h );
+}
+
+float cro(in vec2 a, in vec2 b ) { return a.x*b.y - a.y*b.x; }
+float sdUnevenCapsule( in vec2 p, in vec2 pa, in vec2 pb, in float ra, in float rb )
+{
+    p  -= pa;
+    pb -= pa;
+    float h = dot(pb,pb);
+    vec2  q = vec2( dot(p,vec2(pb.y,-pb.x)), dot(p,pb) )/h;
+    
+    //-----------
+    
+    q.x = abs(q.x);
+    
+    float b = ra-rb;
+    vec2  c = vec2(sqrt(h-b*b),b);
+    
+    float k = cro(c,q);
+    float m = dot(c,q);
+    float n = dot(q,q);
+    
+         if( k < 0.0 ) return sqrt(h*(n            )) - ra;
+    else if( k > c.x ) return sqrt(h*(n+1.0-2.0*q.y)) - rb;
+                       return m                       - ra;
+}
+
+
 vec3 hsv2rgb(vec3 c)
 {
     vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
@@ -190,6 +229,24 @@ void main() {
         // frag_colour = vec4(colour.x + 0.5*nr, colour.y + 0.3*ng, colour.z + 0.1*nb, density);
         // frag_colour = vec4(colour.xyz, density * 0.4 + density*nz + 0.2*nz);
 
+        break;
+        case 5u:
+        // float d = sdSegment(uv, vec2(0.5, 0.25), vec2(0.5, 0.75));
+        x = (uv.x/2.0) + 0.25;
+        float d = sdUnevenCapsule(vec2(x, uv.y), vec2(0.5, 0.25), vec2(0.5, 0.75), 0.25, 0.05);
+
+        density = -d;
+        density = density * 4;
+        density = density + cnoise(vec3(10.0*uv, 2.0*time)) * 0.2 + cnoise(vec3(20.0*uv, 4.0*time)) * 0.1;
+        if (density <= 0) {
+          frag_colour = vec4(0, 0, 0, 0);
+          return;
+        }
+
+        // vec4 cout = vec4(1, 0.7, 0, 0.9);
+        vec4 cout = colour;
+        vec4 cin = vec4(1, 1, 1, 0.9);
+        frag_colour = mix(cout, cin, density);
         break;
         case 1000u:
         float h1 = 0.6 -0.3 * log(f1d(uv.x * 3 + time * 0.1));

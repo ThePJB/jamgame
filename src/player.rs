@@ -6,6 +6,7 @@ use glutin::event::VirtualKeyCode;
 impl Game {
     pub fn update_player(&mut self, dt: f32) {
         self.player_hp += self.player_hp_regen * dt;
+        self.player_hp = self.player_hp.min(self.player_hp_max);
         self.player_vel = v2(0., 0.);
         if self.held_keys.contains(&VirtualKeyCode::A) {
             self.player_vel.x -= self.player_speed;
@@ -37,54 +38,108 @@ impl Game {
     }
 
     pub fn draw_player(&mut self) {
-        let p1 = v2(0.5, 0.0);
-        let p2  = v2(0.75, 0.2);
-        let p3  = v2(0.5, 0.4);
-        let p4  = v2(0.25, 0.2);
-    
-        let p5 = p2.lerp(p3, 0.25);
-        let p6 = p4.lerp(p3, 0.25);
-        let p7 = p1.lerp(p3, 0.25);
-    
-        let p8 = v2(1.0, 0.5);
-        let p9 = v2(0.5, 1.0);
-        let p10 = v2(0.0, 0.5);
-    
-        let p11 = p7.lerp(p8, 0.5);
-        let p12 = p7.lerp(p10, 0.5);
-        let p13 = p7.lerp(p9, 0.5);
-    
-        let player_scale = 0.25;
+        let b1 = v2(0.0, -1.0);
+        let b2 = v2(1.0, 0.0);
+        let b3 = v2(0.0, 1.0);
+        let b4 = v2(-1.0, 0.0);
+
+        let hu = v2(0.5, 0.0);
+        let hv = v2(0.0, 0.5);
+
+        let h1 = b1 - hv;
+        let h2 = b1 + hu;
+        let h3 = b1 + hv;
+        let h4 = b1 - hu;
+
+        let f1 = b1;
+        let f2 = b1.lerp(b2, 0.25);
+        let f3 = b1.lerp(b3, 0.25);
+        let f4 = b1.lerp(b4, 0.25);
+
+        let s1 = b1;
+        let s2 = b1.lerp(b2, 0.5);
+        let s3 = b1.lerp(b3, 0.5);
+        let s4 = b1.lerp(b4, 0.5);
+
+        let player_scale = 0.1;
         let player_transform = [
-            player_scale, 0., self.player_pos.x - 0.5*player_scale,
-            0., player_scale, self.player_pos.y - 0.5*player_scale,
+            player_scale, 0., self.player_pos.x,
+            0., player_scale, self.player_pos.y,
             0., 0., 1.
         ];
-    
-        // self.world_geometry.put_rect(self.player_pos.rect_centered(player_s, player_s), v4(0., 0., 1., 1.), 0.7, v4(1., 1., 1., 1.), 0);
-    
-        let player_colour = v4(20.0, 0.5, 0.85, 1.0).hsv_to_rgb();
-        let player_trim_colour = v4(180.0, 0.2, 0.7, 1.0).hsv_to_rgb();
-        let player_face_colour = v4(0., 0., 0., 1.);
-        let player_eye_colour = v4(1., 1., 1., 1.);
+
+        let body_colour = v4(20.0, 0.5, 0.85, 1.0).hsv_to_rgb();
+        let scarf_colour = v4(180.0, 0.2, 0.7, 1.0).hsv_to_rgb();
+        let face_colour = v4(0., 0., 0., 1.);
+        let eye_colour = v4(1., 1., 1., 1.);
         let player_depth = 0.5;
     
-        self.world_geometry.put_quad_transform(p1, v2(0., 0.), p2, v2(0., 0.), p3, v2(0., 0.), p4, v2(0., 0.), player_depth, player_trim_colour, 0, &player_transform);
-        self.world_geometry.put_quad_transform(p7, v2(0., 0.), p5, v2(0., 0.), p3, v2(0., 0.), p6, v2(0., 0.), player_depth - 0.002, player_face_colour, 0, &player_transform);
-        self.world_geometry.put_quad_transform(p7, v2(0., 0.), p8, v2(0., 0.), p9, v2(0., 0.), p10, v2(0., 0.), player_depth, player_colour, 0, &player_transform);
-        self.world_geometry.put_quad_transform(p7, v2(0., 0.), p11, v2(0., 0.), p13, v2(0., 0.), p12, v2(0., 0.), player_depth - 0.001, player_trim_colour, 0, &player_transform);
+        self.world_geometry.put_quad_transform(b1, v2(0., 0.), b2, v2(0., 0.), b3, v2(0., 0.), b4, v2(0., 0.), player_depth, body_colour, 0, &player_transform);
+        self.world_geometry.put_quad_transform(s1, v2(0., 0.), s2, v2(0., 0.), s3, v2(0., 0.), s4, v2(0., 0.), player_depth, scarf_colour, 0, &player_transform);
+        self.world_geometry.put_quad_transform(h1, v2(0., 0.), h2, v2(0., 0.), h3, v2(0., 0.), h4, v2(0., 0.), player_depth, scarf_colour, 0, &player_transform);
+        self.world_geometry.put_quad_transform(f1, v2(0., 0.), f2, v2(0., 0.), f3, v2(0., 0.), f4, v2(0., 0.), player_depth, face_colour, 0, &player_transform);
     
-        let p_leye = p4.lerp(p2, 0.35);
-        let p_reye = p4.lerp(p2, 0.65); 
+        let p_leye = f4.lerp(f2, 0.35);
+        let p_reye = f4.lerp(f2, 0.65); 
     
         let tv1 = v2(0.04, 0.0);
         let tv2 = v2(0.0, 0.04);
     
-        self.world_geometry.put_triangle_transform(p_leye - tv1, v2(0.0, 0.0), p_leye + tv1, v2(0.0, 0.0), p_leye + tv2, v2(0.0, 0.0), player_depth - 0.003, player_eye_colour, 0, &player_transform);
-        self.world_geometry.put_triangle_transform(p_reye - tv1, v2(0.0, 0.0), p_reye + tv1, v2(0.0, 0.0), p_reye + tv2, v2(0.0, 0.0), player_depth - 0.003, player_eye_colour, 0, &player_transform);
+        self.world_geometry.put_triangle_transform(p_leye - tv1, v2(0.0, 0.0), p_leye + tv1, v2(0.0, 0.0), p_leye + tv2, v2(0.0, 0.0), player_depth - 0.003, eye_colour, 0, &player_transform);
+        self.world_geometry.put_triangle_transform(p_reye - tv1, v2(0.0, 0.0), p_reye + tv1, v2(0.0, 0.0), p_reye + tv2, v2(0.0, 0.0), player_depth - 0.003, eye_colour, 0, &player_transform);
     
-        self.world_geometry.put_rect_transform(v4(0.0, 1.0, 1.0, 0.25), v4(0., 0., 1., 1.,), player_depth + 0.01, v4(0., 0., 0., 1.0), 3, &player_transform);
+        self.world_geometry.put_rect_transform(v4(-1.0, 1.0, 2.0, 0.5), v4(0., 0., 1., 1.,), player_depth + 0.01, v4(0., 0., 0., 1.0), 3, &player_transform);
     }
+
+    // pub fn draw_player(&mut self) {
+    //     let p1 = v2(0.0, -1.0);
+    //     let p2  = v2(0.5, -0.6);
+    //     let p3  = v2(0.0, -0.2);
+    //     let p4  = v2(-0.5, -0.6);
+    
+    //     let p5 = p2.lerp(p3, 0.25);
+    //     let p6 = p4.lerp(p3, 0.25);
+    //     let p7 = p1.lerp(p3, 0.25);
+    
+    //     let p8 = v2(1.0, 0.0);
+    //     let p9 = v2(0.0, 1.0);
+    //     let p10 = v2(-1.0, 0.0);
+    
+    //     let p11 = p7.lerp(p8, 0.5);
+    //     let p12 = p7.lerp(p10, 0.5);
+    //     let p13 = p7.lerp(p9, 0.5);
+    
+    //     let player_scale = 0.1;
+    //     let player_transform = [
+    //         player_scale, 0., self.player_pos.x,
+    //         0., player_scale, self.player_pos.y,
+    //         0., 0., 1.
+    //     ];
+    
+    //     // self.world_geometry.put_rect(self.player_pos.rect_centered(player_s, player_s), v4(0., 0., 1., 1.), 0.7, v4(1., 1., 1., 1.), 0);
+    
+    //     let player_colour = v4(20.0, 0.5, 0.85, 1.0).hsv_to_rgb();
+    //     let player_trim_colour = v4(180.0, 0.2, 0.7, 1.0).hsv_to_rgb();
+    //     let player_face_colour = v4(0., 0., 0., 1.);
+    //     let player_eye_colour = v4(1., 1., 1., 1.);
+    //     let player_depth = 0.5;
+    
+    //     self.world_geometry.put_quad_transform(p1, v2(0., 0.), p2, v2(0., 0.), p3, v2(0., 0.), p4, v2(0., 0.), player_depth, player_trim_colour, 0, &player_transform);
+    //     self.world_geometry.put_quad_transform(p7, v2(0., 0.), p5, v2(0., 0.), p3, v2(0., 0.), p6, v2(0., 0.), player_depth - 0.002, player_face_colour, 0, &player_transform);
+    //     self.world_geometry.put_quad_transform(p7, v2(0., 0.), p8, v2(0., 0.), p9, v2(0., 0.), p10, v2(0., 0.), player_depth, player_colour, 0, &player_transform);
+    //     self.world_geometry.put_quad_transform(p7, v2(0., 0.), p11, v2(0., 0.), p13, v2(0., 0.), p12, v2(0., 0.), player_depth - 0.001, player_trim_colour, 0, &player_transform);
+    
+    //     let p_leye = p4.lerp(p2, 0.35);
+    //     let p_reye = p4.lerp(p2, 0.65); 
+    
+    //     let tv1 = v2(0.04, 0.0);
+    //     let tv2 = v2(0.0, 0.04);
+    
+    //     self.world_geometry.put_triangle_transform(p_leye - tv1, v2(0.0, 0.0), p_leye + tv1, v2(0.0, 0.0), p_leye + tv2, v2(0.0, 0.0), player_depth - 0.003, player_eye_colour, 0, &player_transform);
+    //     self.world_geometry.put_triangle_transform(p_reye - tv1, v2(0.0, 0.0), p_reye + tv1, v2(0.0, 0.0), p_reye + tv2, v2(0.0, 0.0), player_depth - 0.003, player_eye_colour, 0, &player_transform);
+    
+    //     self.world_geometry.put_rect_transform(v4(-1.0, 1.0, 2.0, 0.5), v4(0., 0., 1., 1.,), player_depth + 0.01, v4(0., 0., 0., 1.0), 3, &player_transform);
+    // }
     
     pub fn draw_player_projectiles(&mut self) {
         let projectile_s = 0.05;
@@ -100,7 +155,7 @@ impl Game {
             let o3 = (orth-2.0*u)*projectile_s;
             let o4 = (-orth-2.0*u)*projectile_s;
 
-            self.world_geometry.put_quad(p+o1, v2(0.0, 0.0), p+o2, v2(1.0, 0.0), p+o3, v2(1.0, 1.0), p+o4, v2(0.0, 1.0), 0.5, v4(1., 1., 0., 1.), 0);
+            self.world_geometry.put_quad(p+o1, v2(0.0, 0.0), p+o2, v2(1.0, 0.0), p+o3, v2(1.0, 1.0), p+o4, v2(0.0, 1.0), 0.35, v4(0., 0.7, 1., 0.9), 5);
         }
     }
     
@@ -118,7 +173,7 @@ impl Game {
             for enemy_idx in 0..self.enemy_x.len() {
                 let ep = v2(self.enemy_x[enemy_idx], self.enemy_y[enemy_idx]);
                 let vp = ep - v2(self.player_projectile_x[idx], self.player_projectile_y[idx]);
-                if vp.norm() < 0.2 {
+                if vp.norm() < 0.3 {
                     kill = true;
                     self.enemy_hp[enemy_idx] -= self.player_damage;
                 }

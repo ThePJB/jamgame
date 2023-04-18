@@ -50,6 +50,7 @@ pub struct Game {
     pub player_vel: V2,
     pub player_succ: f32,
     pub player_hp: f32,
+    pub player_hp_max: f32,
     pub player_hp_regen: f32,
     pub player_speed: f32,
     pub player_t_shoot: f32,
@@ -195,7 +196,7 @@ impl Game {
             aim: v2(0., 0.),
             lmb: false,
             t: 0.0,
-            t_level: 100.0,
+            t_level: 0.0,
             t_last: Instant::now(),
             program,
             vao,
@@ -204,14 +205,15 @@ impl Game {
             in_portal: false,
             player_pos: v2(0., 0.),
             player_vel: v2(0., 0.),
-            player_succ: 1.0,
+            player_succ: 0.5,
             player_hp: 1.0,
+            player_hp_max: 1.0,
             player_hp_regen: 0.05,
-            player_speed: 1.0,
+            player_speed: 0.5,
             player_t_shoot: -999.0, 
             player_cooldown: 0.7,
             player_damage: 0.5,
-            player_proj_speed: 2.0,
+            player_proj_speed: 1.5,
             held_keys: HashSet::new(),
             screen_geometry: VertexBuffer::default(),
             world_geometry: VertexBuffer::default(),
@@ -259,7 +261,6 @@ impl Game {
                         self.aim.y = (position.y as f32 - self.yres as f32/2.0) as f32 / self.yres as f32;
                         self.aim.x *= (self.xres as f32 / self.yres as f32);
                         self.aim = self.aim.normalize();
-                        dbg!(self.xres, self.yres);
                     },
                     WindowEvent::Resized(size) => {
                         self.xres = size.width as i32;
@@ -283,12 +284,19 @@ impl Game {
                                     VirtualKeyCode::Escape => {
                                     },
                                     VirtualKeyCode::T => {
-                                        if !self.in_portal && self.gems > 500 {
-                                            self.gems -= 500;
-                                            self.in_portal = true;
-                                            self.zero_state();
+                                        if self.in_portal {
+                                            self.in_portal = false;
+                                            // regenerate level
+                                            self.t_level = 0.0;
+                                            // regen gems etc
+                                            self.level_seed = khash(self.level_seed * 12412317);
+                                        } else {
+                                            if self.gems > 500 {
+                                                self.gems -= 500;
+                                                self.in_portal = true;
+                                                self.zero_state();
+                                            }
                                         }
-                                        println!("portal");
                                     },
                                     _ => {},
                                 }
@@ -316,7 +324,9 @@ impl Game {
         let screen_rect = v4(-1., -1., 2., 2.);
         let aspect = self.xres as f32 / self.yres as f32;
 
-        self.simulate(dt);
+        if !self.in_portal {
+            self.simulate(dt);
+        }
 
         let cam_x = self.player_pos.x;
         let cam_y = self.player_pos.y;
@@ -351,15 +361,16 @@ impl Game {
             // normal level drawing
             self.draw_level();
             self.draw_player();
-            self.draw_gems();
             self.draw_enemies();
+            self.draw_gems();
             self.draw_enemy_projectiles();
             self.draw_player_projectiles();
+
+            // self.screen_geometry.put_rect(v4(-1., -1., 1., 1.), v4(0., 0., 1., 1.), 0.2, v4(1., 1., 1., 1.), 5);
 
             // draw gem count
             self.screen_geometry.put_string_left(&format!("hp: {} gems: {}",(self.player_hp * 100.0).round(),  self.gems),  -1.0, -1.0, 12./16. * fntsize, fntsize, 0.1, v4(1., 1., 1., 1.));
         }
-
 
 
         self.gl.uniform_1_f32(self.gl.get_uniform_location(self.program, "time").as_ref(), self.t);
@@ -412,7 +423,7 @@ impl Game {
     }
 
     pub fn draw_level(&mut self) {
-        let world_colour = v4(50.0, 0.3, 0.9, 1.0).hsv_to_rgb();
+        let world_colour = v4(50.0, 0.3, 0.8, 1.0).hsv_to_rgb();
         // we could do some texturing on gpu
         // or just place rocks and shit as well as da gems
         self.world_geometry.put_rect(v4(-LEVEL_W/2.0, -LEVEL_H/2.0, LEVEL_W, LEVEL_H,), v4(0., 0., 1., 1.), 0.9, world_colour, 0);

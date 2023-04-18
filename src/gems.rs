@@ -1,6 +1,8 @@
 use crate::game::*;
 use crate::math::*;
 
+const COLLECTION_RADIUS: f32 = 0.08;
+
 impl Game {
     pub fn draw_gems(&mut self) {
         for i in 0..self.gem_x.len() {
@@ -25,8 +27,8 @@ impl Game {
 
             let yo = ((krand(seed) * 2.0 * PI) + self.t).sin() * 0.04 + 0.1;
 
-            self.world_geometry.put_rect(v2(self.gem_x[i], self.gem_y[i]).rect_centered(gem_s * s * 0.8, gem_s * s * 0.5 * 0.8), v4(0., 0., 1., 1.,), 0.4 + 0.01, colour, 3);
-            self.world_geometry.put_rect(v2(self.gem_x[i], self.gem_y[i] - yo * s).rect_centered(gem_s * s, gem_s * s), v4(0., 0., 1., 1.,), 0.4, colour, 2);
+            self.world_geometry.put_rect(v2(self.gem_x[i], self.gem_y[i] + yo * s).rect_centered(gem_s * s * 0.8, gem_s * s * 0.5 * 0.8), v4(0., 0., 1., 1.,), 0.4 + 0.01, colour, 3);
+            self.world_geometry.put_rect(v2(self.gem_x[i], self.gem_y[i]).rect_centered(gem_s * s, gem_s * s), v4(0., 0., 1., 1.,), 0.4, colour, 2);
         }
     }
 
@@ -41,11 +43,11 @@ impl Game {
             let d = (dx*dx+dy*dy).sqrt();
 
             let accel = 16.0;
-            let fric = 8.0;
+            let fric = 4.0;
 
             if d < self.player_succ {
-                self.gem_vx[idx] += accel * dx.signum() * dt;
-                self.gem_vy[idx] += accel * dy.signum() * dt;
+                self.gem_vx[idx] += accel * dx.signum()*(self.player_succ - d) * dt;
+                self.gem_vy[idx] += accel * dy.signum()*(self.player_succ - d) * dt;
             }
             self.gem_x[idx] += self.gem_vx[idx] * dt;
             self.gem_y[idx] += self.gem_vy[idx] * dt;
@@ -53,7 +55,7 @@ impl Game {
             self.gem_vx[idx] -= self.gem_vx[idx] * dt * fric;
             self.gem_vy[idx] -= self.gem_vy[idx] * dt * fric;
 
-            if d < 0.125 {
+            if d < COLLECTION_RADIUS {
                 self.gems += match self.gem_type[idx] {
                     0 => 10,
                     1 => 20,

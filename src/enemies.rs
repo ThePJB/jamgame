@@ -1,6 +1,7 @@
 use crate::game::*;
 use crate::math::*;
 
+
 impl Game {
     pub fn draw_crystal_enemy(&mut self, x: f32, y: f32, colour: V4, scale: f32) {
         let tmat = [
@@ -10,15 +11,15 @@ impl Game {
         ];
 
         let depth = 0.5;
-        let w = 0.25;
+        let w = 0.5;
 
-        let p1 = v2(0.0, 0.0);
-        let p2 = v2(w, 0.33);
+        let p1 = v2(0.0, -1.0);
+        let p2 = v2(w, -0.2);
         let p3 = v2(0.0, 1.0);
-        let p4 = v2(-w, 0.33);
+        let p4 = v2(-w, -0.2);
 
         let p5 = p1.lerp(p3, 0.2);
-        let p6 = p1.lerp(p3, 0.5);
+        let p6 = p1.lerp(p3, 0.6);
 
         self.world_geometry.put_triangle_transform(p1, v2(0., 0.), p2, v2(0., 0.), p5, v2(0., 0.), depth - 0.002, colour, 0, &tmat);
         self.world_geometry.put_triangle_transform(p1, v2(0., 0.), p5, v2(0., 0.), p4, v2(0., 0.), depth - 0.002, colour, 0, &tmat);
@@ -60,7 +61,7 @@ impl Game {
                 let richness = 1.7 * noise2(x * nscale, y * nscale, (self.level_seed * 12312397) as u32) - 0.3;
                 let roll = krand(si);
 
-                let score = richness * roll * self.t_level / 10.0;
+                let score = richness * roll * (0.25*self.t_level + 10.0);
 
                 if score > 2.0 {
                     self.enemy_x.push(x);
@@ -77,7 +78,7 @@ impl Game {
     pub fn draw_enemies(&mut self) {
         for idx in 0..self.enemy_x.len() {
             if self.enemy_type[idx] == 0 {
-                self.draw_crystal_enemy(self.enemy_x[idx], self.enemy_y[idx], v4(0., 0.6, 0., 1.), 0.4);
+                self.draw_crystal_enemy(self.enemy_x[idx], self.enemy_y[idx], v4(0., 0.6, 0., 1.), 0.25);
             }
         }
     }
@@ -177,7 +178,9 @@ impl Game {
             let o3 = (orth-2.0*u)*projectile_s;
             let o4 = (-orth-2.0*u)*projectile_s;
 
-            self.world_geometry.put_quad(p+o1, v2(0.0, 0.0), p+o2, v2(1.0, 0.0), p+o3, v2(1.0, 1.0), p+o4, v2(0.0, 1.0), 0.5, v4(1., 0., 0., 1.), 4);
+            self.world_geometry.put_quad(p+o1, v2(0.0, 0.0), p+o2, v2(1.0, 0.0), p+o3, v2(1.0, 1.0), p+o4, v2(0.0, 1.0), 0.35, v4(1., 0.7, 0., 0.9), 5);
         }
     }
+
+    
 }

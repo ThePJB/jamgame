@@ -23,6 +23,9 @@ use crate::player;
 pub const LEVEL_W: f32 = 20.0;
 pub const LEVEL_H: f32 = 20.0;
 
+pub const FNTH: f32 = 0.1;
+pub const FNTW: f32 = FNTH * 12./16.;
+
 pub struct Game {
     pub xres: i32,
     pub yres: i32,
@@ -47,6 +50,7 @@ pub struct Game {
     pub texture: glow::NativeTexture,
 
     pub screen_geometry: VertexBuffer,
+    pub screen_geometry_unscaled: VertexBuffer,
     pub world_geometry: VertexBuffer,
 
     pub in_portal: bool,
@@ -62,6 +66,8 @@ pub struct Game {
     pub player_cooldown: f32,
     pub player_damage: f32,
     pub player_proj_speed: f32,
+
+    pub warp_price: usize,
 
     pub seed: usize,
     pub level_seed: usize,
@@ -225,14 +231,16 @@ impl Game {
             player_succ: 0.5,
             player_hp: 1.0,
             player_hp_max: 1.0,
-            player_hp_regen: 0.05,
+            player_hp_regen: 0.01,
             player_speed: 0.5,
             player_t_shoot: -999.0, 
             player_cooldown: 0.7,
             player_damage: 0.5,
             player_proj_speed: 1.5,
+            warp_price: 500,
             held_keys: HashSet::new(),
             screen_geometry: VertexBuffer::default(),
+            screen_geometry_unscaled: VertexBuffer::default(),
             world_geometry: VertexBuffer::default(),
             seed: initial_seed,
             enemies_spawn_seed: khash(initial_seed * 1231247),
@@ -242,7 +250,7 @@ impl Game {
             gem_y: vec![],
             gem_vx: vec![],
             gem_vy: vec![],
-            gems: 0,
+            gems: 500,
             spawn_enemies_counter: 0.0,
             enemy_x: vec![],
             enemy_y: vec![],
@@ -309,8 +317,8 @@ impl Game {
                                             // regen gems etc
                                             self.level_seed = khash(self.level_seed * 12412317);
                                         } else {
-                                            if self.gems > 500 {
-                                                self.gems -= 500;
+                                            if self.gems >= self.warp_price {
+                                                self.gems -= self.warp_price;
                                                 self.in_portal = true;
                                                 self.zero_state();
                                             }
@@ -337,9 +345,9 @@ impl Game {
         self.t_last = t_now;
 
         self.screen_geometry = VertexBuffer::default();
+        self.screen_geometry_unscaled = VertexBuffer::default();
         self.world_geometry = VertexBuffer::default();
 
-        let screen_rect = v4(-1., -1., 2., 2.);
         let aspect = self.xres as f32 / self.yres as f32;
 
         if !self.in_portal {
@@ -351,14 +359,28 @@ impl Game {
         let scale = 1.0;
         let x_scale = scale/aspect;   // either this or 1/aspect
         let y_scale = scale;
-        let fntsize = 0.1;
 
-        
         if self.in_portal {
-            self.screen_geometry.put_rect(v4(-1., -1., 2., 2.), v4(0., 0., 1., 1.,), 0.9, v4(0., 0., 0., 1.), 0);
-            self.screen_geometry.put_string_left(&format!("gems: {}", self.gems),  -1.0, -1.0, 12./16. * fntsize, fntsize, 0.1, v4(1., 1., 1., 1.));
+            self.screen_geometry_unscaled.put_rect(v4(-1., -1., FNTW/aspect* 8.0, FNTH*8.0), v4(0., 0., 1., 1.), 0.8, v4(0.5, 0.5, 0.5, 0.8), 0);
+
+            self.screen_geometry_unscaled.put_rect(v4(-1., -1., 2., 2.), v4(0., 0., 1., 1.,), 0.9, v4(0., 0., 0., 1.), 0);
+            let mut y = -1.0;
+            self.screen_geometry_unscaled.put_string_left(&format!("A{}", self.gems),  -1.0, y, FNTW/aspect, FNTH, 0.1, v4(1., 1., 1., 1.)); y += FNTH;
+            self.screen_geometry_unscaled.put_string_left(&format!("B{}", self.player_damage),  -1.0, y, FNTW/aspect, FNTH, 0.1, v4(1., 1., 1., 1.)); y += FNTH;
+            self.screen_geometry_unscaled.put_string_left(&format!("C{}", self.player_hp_max),  -1.0, y, FNTW/aspect, FNTH, 0.1, v4(1., 1., 1., 1.)); y += FNTH;
+            self.screen_geometry_unscaled.put_string_left(&format!("D{}", self.player_hp_regen),  -1.0, y, FNTW/aspect, FNTH, 0.1, v4(1., 1., 1., 1.)); y += FNTH;
+            self.screen_geometry_unscaled.put_string_left(&format!("E{}", self.player_speed),  -1.0, y, FNTW/aspect, FNTH, 0.1, v4(1., 1., 1., 1.)); y += FNTH;
+            self.screen_geometry_unscaled.put_string_left(&format!("F{}", self.player_succ),  -1.0, y, FNTW/aspect, FNTH, 0.1, v4(1., 1., 1., 1.)); y += FNTH;
+            self.screen_geometry_unscaled.put_string_left(&format!("G{}", self.player_proj_speed),  -1.0, y, FNTW/aspect, FNTH, 0.1, v4(1., 1., 1., 1.)); y += FNTH;
+            self.screen_geometry_unscaled.put_string_left(&format!("H{}", self.player_cooldown),  -1.0, y, FNTW/aspect, FNTH, 0.1, v4(1., 1., 1., 1.)); y += FNTH;
+
+            // warp zone panel
+
+            // spinning player
+            self.draw_player(0., 0., 0.2, self.t, false);
+
             if self.t % 2.0 < 1.0 {
-                self.screen_geometry.put_string_centered("-- WARP ZONE --",  0.0, 1.0-fntsize, 12./16. * fntsize, fntsize, 0.1, v4(1., 1., 1., 1.));
+                self.screen_geometry_unscaled.put_string_centered("-- warp zone --",  0.0, 1.0-FNTH, FNTW/aspect, FNTH, 0.1, v4(1., 1., 1., 1.));
             }
 
             // draw cool white lines
@@ -370,15 +392,15 @@ impl Game {
                 let sc = khash(si + 1231237 * cycle_i);
                 let x = krand(sc) * 2.0 - 1.0;
                 let phase = (t_lines - phase_i) % (2.0*PI);
-                let y = (phase / (2.0*PI)) * 2.0 - 1.0;
-                self.screen_geometry.put_rect(v4(x, y, 0.01, 0.1), v4(0., 0., 1., 1.,), 0.3, v4(1., 1., 1., 1.), 0);
+                let y = (((phase / (2.0*PI)) * 2.0 - 1.0) - 0.1)*1.1;
+                self.screen_geometry_unscaled.put_rect(v4(x, y, 0.01, 0.1), v4(0., 0., 1., 1.,), 0.3, v4(1., 1., 1., 1.), 0);
             }
 
 
         } else {
             // normal level drawing
             self.draw_level();
-            self.draw_player();
+            self.draw_player(self.player_pos.x, self.player_pos.y, 0.1, 0.0, true);
             self.draw_enemies();
             self.draw_gems();
             self.draw_enemy_projectiles();
@@ -387,7 +409,15 @@ impl Game {
             // self.screen_geometry.put_rect(v4(-1., -1., 1., 1.), v4(0., 0., 1., 1.), 0.2, v4(1., 1., 1., 1.), 5);
 
             // draw gem count
-            self.screen_geometry.put_string_left(&format!("hp: {} gems: {}",(self.player_hp * 100.0).round(),  self.gems),  -1.0, -1.0, 12./16. * fntsize, fntsize, 0.1, v4(1., 1., 1., 1.));
+            self.screen_geometry_unscaled.put_rect(v4(-1., -1., 0.5, FNTH), v4(0., 0., 1., 1.), 0.1, v4(0., 0., 0., 1.), 0);
+            self.screen_geometry_unscaled.put_rect(v4(-1., -1., 0.5*(self.player_hp/self.player_hp_max), FNTH), v4(0., 0., 1., 1.), 0.1, v4(1., 0., 0., 1.), 0);
+            self.screen_geometry_unscaled.put_string_left(&format!("A{}", self.gems),  -1.0, -1.0 + FNTH, FNTW/aspect, FNTH, 0.1, v4(1., 1., 1., 1.));
+            // self.screen_geometry.put_string_left(&format!("hp: {} gems: {}",(self.player_hp * 100.0).round(),  self.gems),  -1.0, -1.0, FNTW, FNTH, 0.1, v4(1., 1., 1., 1.));
+            
+            if self.gems > self.warp_price {
+                    self.screen_geometry_unscaled.put_string_centered(&format!("warp available: A{} [t]", self.warp_price),  0.0, 1.0 - FNTH, FNTW/aspect, FNTH, 0.1, v4(1., 1., 1., 1.));
+            }
+
         }
         // self.prod.push(Sound { id: 1, birthtime: self.t, elapsed: 0.0, remaining: 0.1, magnitude: 0.1, mag_exp: 0.999, frequency: 440.0 * 3./2., freq_exp: 1.0, wait: 0.0, phase: 0.0 }).unwrap();
 
@@ -419,6 +449,16 @@ impl Game {
         ]);
         self.gl.buffer_data_u8_slice(glow::ARRAY_BUFFER, &self.screen_geometry.buf, glow::DYNAMIC_DRAW);
         let vert_count = self.screen_geometry.buf.len() / (10*4);
+        self.gl.draw_arrays(glow::TRIANGLES, 0, vert_count as i32);
+
+        self.gl.uniform_matrix_4_f32_slice(self.gl.get_uniform_location(self.program, "projection").as_ref(), true, &[
+            1., 0., 0., 0.,
+            0., -1., 0., 0.,
+            0., 0., 1., 0.,
+            0., 0., 0., 1.,
+        ]);
+        self.gl.buffer_data_u8_slice(glow::ARRAY_BUFFER, &self.screen_geometry_unscaled.buf, glow::DYNAMIC_DRAW);
+        let vert_count = self.screen_geometry_unscaled.buf.len() / (10*4);
         self.gl.draw_arrays(glow::TRIANGLES, 0, vert_count as i32);
         
         self.window.swap_buffers().unwrap();

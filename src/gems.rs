@@ -25,10 +25,11 @@ impl Game {
                 _ => {panic!("impossible")},
             };
 
-            let yo = ((krand(seed) * 2.0 * PI) + self.t).sin() * 0.04 + 0.1;
+            let yo_varying = ((krand(seed) * 2.0 * PI) + self.t).sin() * 0.04;
+            let yo_fixed =  0.1;
 
-            self.world_geometry.put_rect(v2(self.gem_x[i], self.gem_y[i] + yo * s).rect_centered(gem_s * s * 0.8, gem_s * s * 0.5 * 0.8), v4(0., 0., 1., 1.,), 0.4 + 0.01, colour, 3);
-            self.world_geometry.put_rect(v2(self.gem_x[i], self.gem_y[i]).rect_centered(gem_s * s, gem_s * s), v4(0., 0., 1., 1.,), 0.4, colour, 2);
+            self.world_geometry.put_rect(v2(self.gem_x[i], self.gem_y[i] + yo_fixed * s).rect_centered(gem_s * s * 0.8, gem_s * s * 0.5 * 0.8), v4(0., 0., 1., 1.,), 0.4 + 0.01, colour, 3);
+            self.world_geometry.put_rect(v2(self.gem_x[i], self.gem_y[i] - yo_varying).rect_centered(gem_s * s, gem_s * s), v4(0., 0., 1., 1.,), 0.4, colour, 2);
         }
     }
 

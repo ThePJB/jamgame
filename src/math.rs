@@ -238,3 +238,52 @@ pub fn fnoise2(x: f32, y: f32, seed: u32) -> f32 {
     0.125 * noise2(x * 8.0, y * 8.0, seed.wrapping_mul(0x83242364))) /
     1.675
 }
+
+pub fn mat_rot_z(theta: f32) -> [f32; 9] {
+    let (s, c) = theta.sin_cos();
+    [
+        c, -s, 0.0, 
+        s, c, 0.0,
+        0.0, 0.0, 1.0
+    ]
+}
+pub fn mat_trans(x: f32, y: f32) -> [f32; 9] {
+    [
+        1., 0., x,
+        0., 1., y,
+        0., 0., 1.,
+    ]
+}
+pub fn mat_scale(s: f32) -> [f32; 9] {
+    [
+        s, 0., 0.,
+        0., s, 0.,
+        0., 0., s,
+    ]
+}
+
+pub fn mat_mul33(a: &[f32; 9], b: &[f32; 9]) -> [f32; 9] {
+    [
+        a[0] * b[0] + a[1] * b[3] + a[2] * b[6],
+        a[0] * b[1] + a[1] * b[4] + a[2] * b[7],
+        a[0] * b[2] + a[1] * b[5] + a[2] * b[8],
+        a[3] * b[0] + a[4] * b[3] + a[5] * b[6],
+        a[3] * b[1] + a[4] * b[4] + a[5] * b[7],
+        a[3] * b[2] + a[4] * b[5] + a[5] * b[8],
+        a[6] * b[0] + a[7] * b[3] + a[8] * b[6],
+        a[6] * b[1] + a[7] * b[4] + a[8] * b[7],
+        a[6] * b[2] + a[7] * b[5] + a[8] * b[8],
+    ]
+}
+
+pub fn mat_srt(x: f32, y: f32, scale: f32, theta: f32) -> [f32; 9] {
+    let c = theta.cos();
+    let s = theta.sin();
+    let a = scale * c;
+    let b = scale * s;
+    [
+        a, -b, x,
+        b, a, y,
+        0.0, 0.0, 1.0,
+    ]
+}

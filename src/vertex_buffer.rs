@@ -79,13 +79,15 @@ impl VertexBuffer {
 
     pub fn put_glyph(&mut self, c: char, r: V4, depth: f32, colour: V4) {
         let clip_fn = |mut c: u8| {
+            let mut row = 0;
             if c >= 'a' as u8 && c <= 'z' as u8 {
                 c -= 'a' as u8 - 'A' as u8;
+                row = 1;
             }
             if c >= '+' as u8 && c <= '_' as u8 {
                 let x = c - '+' as u8;
                 let w = '_' as u8 - '+' as u8 + 1; // maybe +1
-                Some(v4(0.0, 0.0, 1.0, 0.5).grid_child(x as usize, 0, w as usize, 1))
+                Some(v4(0.0, 0.0, 1.0, 1.0).grid_child(x as usize, row, w as usize, 2))
             } else {
                 None
             }

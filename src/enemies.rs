@@ -1,6 +1,9 @@
 use crate::game::*;
 use crate::math::*;
 
+// draw flat so doesnt look all fucked up
+// larger, more sinister eye
+
 
 impl Game {
     pub fn draw_crystal_enemy(&mut self, x: f32, y: f32, colour: V4, scale: f32) {
@@ -30,10 +33,10 @@ impl Game {
         self.world_geometry.put_quad_transform(p5, v2(0.0, 0.0), p2, v2(0.0, 0.0), p6, v2(0.0, 0.0), p4, v2(0.0, 0.0), depth - 0.001, v4(0., 0., 0., 1.), 0, &tmat);
 
         let eye_c = p5.lerp(p6, 0.5);
-        let eye_v = (self.player_pos - v2(x, y)).normalize() * 0.07;
+        let eye_v = (self.player_pos - v2(x, y)).normalize() * 0.11;
 
-        let etvx = v2(0.05, 0.0);
-        let etvy = v2(0.0, 0.1);
+        let etvx = v2(0.1, 0.0);
+        let etvy = v2(0.0, 0.3);
 
         self.world_geometry.put_quad_transform(eye_c + eye_v - etvy, v2(0.0, 0.0), eye_c + eye_v + etvx, v2(0.0, 0.0), eye_c + eye_v + etvy, v2(0.0, 0.0), eye_c + eye_v - etvx, v2(0., 0.), depth - 0.0015, v4(1., 0., 0., 1.), 0, &tmat);
         self.world_geometry.put_rect_transform(v4(-w, 1.0, 2.0*w, 0.25), v4(0., 0., 1., 1.,), depth + 0.01, v4(0., 0., 0., 1.0), 3, &tmat);

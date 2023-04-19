@@ -44,7 +44,7 @@ impl Game {
         }
     }
 
-    pub fn draw_player(&mut self) {
+    pub fn draw_player(&mut self, x: f32, y: f32, scale: f32, theta: f32, shadow: bool) {
         let b1 = v2(0.0, -1.0);
         let b2 = v2(1.0, 0.0);
         let b3 = v2(0.0, 1.0);
@@ -68,12 +68,7 @@ impl Game {
         let s3 = b1.lerp(b3, 0.5);
         let s4 = b1.lerp(b4, 0.5);
 
-        let player_scale = 0.1;
-        let player_transform = [
-            player_scale, 0., self.player_pos.x,
-            0., player_scale, self.player_pos.y,
-            0., 0., 1.
-        ];
+        let player_transform = mat_srt(self.player_pos.x, self.player_pos.y, scale, theta);
 
         let body_colour = v4(20.0, 0.5, 0.85, 1.0).hsv_to_rgb();
         let scarf_colour = v4(180.0, 0.2, 0.7, 1.0).hsv_to_rgb();
@@ -95,7 +90,9 @@ impl Game {
         self.world_geometry.put_triangle_transform(p_leye - tv1, v2(0.0, 0.0), p_leye + tv1, v2(0.0, 0.0), p_leye + tv2, v2(0.0, 0.0), player_depth - 0.003, eye_colour, 0, &player_transform);
         self.world_geometry.put_triangle_transform(p_reye - tv1, v2(0.0, 0.0), p_reye + tv1, v2(0.0, 0.0), p_reye + tv2, v2(0.0, 0.0), player_depth - 0.003, eye_colour, 0, &player_transform);
     
-        self.world_geometry.put_rect_transform(v4(-1.0, 1.0, 2.0, 0.5), v4(0., 0., 1., 1.,), player_depth + 0.01, v4(0., 0., 0., 1.0), 3, &player_transform);
+        if shadow {
+            self.world_geometry.put_rect_transform(v4(-1.0, 1.0, 2.0, 0.5), v4(0., 0., 1., 1.,), player_depth + 0.01, v4(0., 0., 0., 1.0), 3, &player_transform);
+        }
     }
 
     pub fn draw_player_projectiles(&mut self) {

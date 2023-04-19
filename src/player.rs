@@ -22,18 +22,25 @@ impl Game {
         }
         self.player_pos = self.player_pos + self.player_vel * dt;
 
-        if self.lmb && self.t - self.player_t_shoot > self.player_cooldown {
-            self.player_t_shoot = self.t;
+        if self.lmb {
+            if self.t - self.player_t_shoot > self.player_cooldown {
+                self.player_t_shoot = self.t;
 
 
-            self.player_projectile_x.push(self.player_pos.x);
-            self.player_projectile_y.push(self.player_pos.y);
-            // let mut u = (self.mouse_pos - v2(0.5, 0.5)).normalize();
-            // u.x /= (self.xres/self.yres) as f32;
-            // u = u.normalize();
-            let v = self.aim*self.player_proj_speed;
-            self.player_projectile_vx.push(v.x);
-            self.player_projectile_vy.push(v.y);
+                self.player_projectile_x.push(self.player_pos.x);
+                self.player_projectile_y.push(self.player_pos.y);
+                // let mut u = (self.mouse_pos - v2(0.5, 0.5)).normalize();
+                // u.x /= (self.xres/self.yres) as f32;
+                // u = u.normalize();
+                let v = self.aim*self.player_proj_speed;
+                self.player_projectile_vx.push(v.x);
+                self.player_projectile_vy.push(v.y);
+                self.prod.push(Sound { id: 2, birthtime: self.t, elapsed: 0.0, remaining: 0.2, magnitude: 0.1, mag_exp: 0.9995, frequency: 1.0, freq_exp: 1.0, wait: 0.0, phase: 0.0, samp: 0 }).unwrap();
+            } else {
+                if self.lmb_this_frame {
+                    self.prod.push(Sound { id: 1, birthtime: self.t, elapsed: 0.0, remaining: 0.2, magnitude: 0.2, mag_exp: 0.9995, frequency: 110.0, freq_exp: 1.0, wait: 0.0, phase: 0.0, samp: 0 }).unwrap();
+                }
+            }
         }
     }
 

@@ -12,6 +12,8 @@ use crate::math::*;
 use crate::vertex_buffer::*;
 use std::collections::HashSet;
 pub use std::f32::consts::PI;
+use cpal::traits::*;
+use ringbuf::*;
 
 use crate::gems;
 use crate::enemies;
@@ -26,10 +28,13 @@ pub struct Game {
     pub yres: i32,
     pub window: glutin::ContextWrapper<glutin::PossiblyCurrent, glutin::window::Window>,
     pub gl: glow::Context,
+    pub stream: cpal::Stream,
+    pub prod: Producer<Sound>,
     
     pub mouse_pos: V2,
     pub aim: V2,
     pub lmb: bool,
+    pub lmb_this_frame: bool,
     pub held_keys: HashSet<VirtualKeyCode>,
 
     pub t: f32,
@@ -94,10 +99,19 @@ pub struct Game {
 
 impl Game {
     pub unsafe fn new(event_loop: &glutin::event_loop::EventLoop<()>) -> Game {
+        // ====================
+        // Sound Init
+        // ====================
+        let rb = RingBuffer::<Sound>::new(100);
+        let (mut prod, mut cons) = rb.split();
+        let stream = stream_setup_for(sample_next, cons).expect("no can make stream");
+        stream.play().expect("no can play stream");
+
+
         let xres = 800i32;
         let yres = 800i32;
         let window_builder = glutin::window::WindowBuilder::new()
-            .with_title("Wizrad 4")
+            .with_title("GJDGJG")
             .with_inner_size(glutin::dpi::PhysicalSize::new(xres, yres));
         let window = glutin::ContextBuilder::new()
             .with_vsync(true)
@@ -192,9 +206,12 @@ impl Game {
             yres,
             window,
             gl,
+            stream,
+            prod,
             mouse_pos: v2(0., 0.),
             aim: v2(0., 0.),
             lmb: false,
+            lmb_this_frame: false,
             t: 0.0,
             t_level: 0.0,
             t_last: Instant::now(),
@@ -269,6 +286,7 @@ impl Game {
                     },
                     WindowEvent::MouseInput {state: ElementState::Pressed, button: MouseButton::Left, ..} => {
                         self.lmb = true;
+                        self.lmb_this_frame = true;
                     },
                     WindowEvent::MouseInput {state: ElementState::Released, button: MouseButton::Left, ..} => {
                         self.lmb = false;
@@ -371,6 +389,7 @@ impl Game {
             // draw gem count
             self.screen_geometry.put_string_left(&format!("hp: {} gems: {}",(self.player_hp * 100.0).round(),  self.gems),  -1.0, -1.0, 12./16. * fntsize, fntsize, 0.1, v4(1., 1., 1., 1.));
         }
+        // self.prod.push(Sound { id: 1, birthtime: self.t, elapsed: 0.0, remaining: 0.1, magnitude: 0.1, mag_exp: 0.999, frequency: 440.0 * 3./2., freq_exp: 1.0, wait: 0.0, phase: 0.0 }).unwrap();
 
 
         self.gl.uniform_1_f32(self.gl.get_uniform_location(self.program, "time").as_ref(), self.t);
@@ -403,6 +422,7 @@ impl Game {
         self.gl.draw_arrays(glow::TRIANGLES, 0, vert_count as i32);
         
         self.window.swap_buffers().unwrap();
+        self.lmb_this_frame = false;
     }
 
     pub fn simulate(&mut self, dt: f32) {
@@ -445,5 +465,167 @@ impl Game {
         self.player_projectile_y = vec![];
         self.player_projectile_vx = vec![];
         self.player_projectile_vy = vec![];
+    }
+}
+
+
+
+
+// ====================
+// Audio stuff
+// ====================
+// 0 : kick drum
+// 1 : sad ding
+
+fn sample_next(o: &mut SampleRequestOptions) -> f32 {
+    let mut acc = 0.0;
+    let mut idx = o.sounds.len();
+    loop {
+        if idx == 0 {
+            break;
+        }
+        idx -= 1;
+
+        if o.sounds[idx].wait > 0.0 {
+            o.sounds[idx].wait -= 1.0/44100.0;
+            continue;
+        }
+
+        o.sounds[idx].elapsed += 1.0/44100.0;
+        o.sounds[idx].remaining -= 1.0/44100.0;
+
+        let t = o.sounds[idx].elapsed;
+
+        if o.sounds[idx].remaining < 0.0 {
+            o.sounds.swap_remove(idx);
+            continue;
+        }
+        if o.sounds[idx].id == 0 {
+            o.sounds[idx].magnitude *= 0.999;
+
+            let f = o.sounds[idx].frequency;
+            let f_trans = f*3.0;
+
+            let t_trans = 1.0/(2.0*PI*f_trans);
+
+            if o.sounds[idx].elapsed < t_trans {
+                o.sounds[idx].phase += f_trans*2.0*PI*1.0/o.sample_rate;
+            } else {
+                o.sounds[idx].phase += f*2.0*PI*1.0/o.sample_rate;
+            }
+            // o.sounds[idx].phase += f*2.0*PI*1.0/o.sample_rate;
+
+            //o.sounds[idx].phase = o.sounds[idx].phase % 2.0*PI; // this sounds really good lol
+
+            acc += (o.sounds[idx].phase).sin() * o.sounds[idx].magnitude
+        } else if o.sounds[idx].id == 1 {
+            o.sounds[idx].magnitude *= o.sounds[idx].mag_exp;
+            o.sounds[idx].frequency *= o.sounds[idx].freq_exp;
+            o.sounds[idx].phase += o.sounds[idx].frequency*2.0*PI*1.0/o.sample_rate;
+            acc += (o.sounds[idx].phase).sin() * o.sounds[idx].magnitude
+        } else if o.sounds[idx].id == 2 {
+            o.sounds[idx].magnitude *= o.sounds[idx].mag_exp;
+            acc += krand(o.sounds[idx].samp as usize) * o.sounds[idx].magnitude;
+        }
+        o.sounds[idx].samp += 1;
+    }
+    acc
+}
+
+#[derive(Debug)]
+pub struct Sound {
+    pub id: usize,
+    pub wait: f32,
+    pub birthtime: f32,
+    pub elapsed: f32,
+    pub remaining: f32,
+    pub magnitude: f32,
+    pub mag_exp: f32,
+    pub frequency: f32,
+    pub freq_exp: f32,
+    pub phase: f32,
+    pub samp: u64,
+}
+
+pub struct SampleRequestOptions {
+    pub sample_rate: f32,
+    pub nchannels: usize,
+    pub channel: Consumer<Sound>,
+    pub sounds: Vec<Sound>,
+}
+
+pub fn stream_setup_for<F>(on_sample: F, channel: Consumer<Sound>) -> Result<cpal::Stream, anyhow::Error>
+where
+    F: FnMut(&mut SampleRequestOptions) -> f32 + std::marker::Send + 'static + Copy,
+{
+    let (_host, device, config) = host_device_setup()?;
+
+    match config.sample_format() {
+        cpal::SampleFormat::F32 => stream_make::<f32, _>(&device, &config.into(), on_sample, channel),
+        cpal::SampleFormat::I16 => stream_make::<i16, _>(&device, &config.into(), on_sample, channel),
+        cpal::SampleFormat::U16 => stream_make::<u16, _>(&device, &config.into(), on_sample, channel),
+    }
+}
+
+pub fn host_device_setup(
+) -> Result<(cpal::Host, cpal::Device, cpal::SupportedStreamConfig), anyhow::Error> {
+    let host = cpal::default_host();
+
+    let device = host
+        .default_output_device()
+        .ok_or_else(|| anyhow::Error::msg("Default output device is not available"))?;
+    println!("Output device : {}", device.name()?);
+
+    let config = device.default_output_config()?;
+    println!("Default output config : {:?}", config);
+
+    Ok((host, device, config))
+}
+
+
+pub fn stream_make<T, F>(
+    device: &cpal::Device,
+    config: &cpal::StreamConfig,
+    on_sample: F,
+    channel: Consumer<Sound>,
+) -> Result<cpal::Stream, anyhow::Error>
+where
+    T: cpal::Sample,
+    F: FnMut(&mut SampleRequestOptions) -> f32 + std::marker::Send + 'static + Copy,
+{
+    let sample_rate = config.sample_rate.0 as f32;
+    let nchannels = config.channels as usize;
+    let mut request = SampleRequestOptions {
+        sample_rate,
+        nchannels,
+        sounds: vec![],
+        channel,
+    };
+    let err_fn = |err| eprintln!("Error building output sound stream: {}", err);
+
+    let stream = device.build_output_stream(
+        config,
+        move |output: &mut [T], _: &cpal::OutputCallbackInfo| {
+            on_window(output, &mut request, on_sample)
+        },
+        err_fn,
+    )?;
+
+    Ok(stream)
+}
+
+fn on_window<T, F>(output: &mut [T], request: &mut SampleRequestOptions, mut on_sample: F)
+where
+    T: cpal::Sample,
+    F: FnMut(&mut SampleRequestOptions) -> f32 + std::marker::Send + 'static,
+{
+    if let Some(sc) = request.channel.pop() {
+        request.sounds.push(sc);
+    }
+    for frame in output.chunks_mut(request.nchannels) {
+        let value: T = cpal::Sample::from::<f32>(&on_sample(request));
+        for sample in frame.iter_mut() {
+            *sample = value;
+        }
     }
 }

@@ -98,56 +98,6 @@ impl Game {
         self.world_geometry.put_rect_transform(v4(-1.0, 1.0, 2.0, 0.5), v4(0., 0., 1., 1.,), player_depth + 0.01, v4(0., 0., 0., 1.0), 3, &player_transform);
     }
 
-    // pub fn draw_player(&mut self) {
-    //     let p1 = v2(0.0, -1.0);
-    //     let p2  = v2(0.5, -0.6);
-    //     let p3  = v2(0.0, -0.2);
-    //     let p4  = v2(-0.5, -0.6);
-    
-    //     let p5 = p2.lerp(p3, 0.25);
-    //     let p6 = p4.lerp(p3, 0.25);
-    //     let p7 = p1.lerp(p3, 0.25);
-    
-    //     let p8 = v2(1.0, 0.0);
-    //     let p9 = v2(0.0, 1.0);
-    //     let p10 = v2(-1.0, 0.0);
-    
-    //     let p11 = p7.lerp(p8, 0.5);
-    //     let p12 = p7.lerp(p10, 0.5);
-    //     let p13 = p7.lerp(p9, 0.5);
-    
-    //     let player_scale = 0.1;
-    //     let player_transform = [
-    //         player_scale, 0., self.player_pos.x,
-    //         0., player_scale, self.player_pos.y,
-    //         0., 0., 1.
-    //     ];
-    
-    //     // self.world_geometry.put_rect(self.player_pos.rect_centered(player_s, player_s), v4(0., 0., 1., 1.), 0.7, v4(1., 1., 1., 1.), 0);
-    
-    //     let player_colour = v4(20.0, 0.5, 0.85, 1.0).hsv_to_rgb();
-    //     let player_trim_colour = v4(180.0, 0.2, 0.7, 1.0).hsv_to_rgb();
-    //     let player_face_colour = v4(0., 0., 0., 1.);
-    //     let player_eye_colour = v4(1., 1., 1., 1.);
-    //     let player_depth = 0.5;
-    
-    //     self.world_geometry.put_quad_transform(p1, v2(0., 0.), p2, v2(0., 0.), p3, v2(0., 0.), p4, v2(0., 0.), player_depth, player_trim_colour, 0, &player_transform);
-    //     self.world_geometry.put_quad_transform(p7, v2(0., 0.), p5, v2(0., 0.), p3, v2(0., 0.), p6, v2(0., 0.), player_depth - 0.002, player_face_colour, 0, &player_transform);
-    //     self.world_geometry.put_quad_transform(p7, v2(0., 0.), p8, v2(0., 0.), p9, v2(0., 0.), p10, v2(0., 0.), player_depth, player_colour, 0, &player_transform);
-    //     self.world_geometry.put_quad_transform(p7, v2(0., 0.), p11, v2(0., 0.), p13, v2(0., 0.), p12, v2(0., 0.), player_depth - 0.001, player_trim_colour, 0, &player_transform);
-    
-    //     let p_leye = p4.lerp(p2, 0.35);
-    //     let p_reye = p4.lerp(p2, 0.65); 
-    
-    //     let tv1 = v2(0.04, 0.0);
-    //     let tv2 = v2(0.0, 0.04);
-    
-    //     self.world_geometry.put_triangle_transform(p_leye - tv1, v2(0.0, 0.0), p_leye + tv1, v2(0.0, 0.0), p_leye + tv2, v2(0.0, 0.0), player_depth - 0.003, player_eye_colour, 0, &player_transform);
-    //     self.world_geometry.put_triangle_transform(p_reye - tv1, v2(0.0, 0.0), p_reye + tv1, v2(0.0, 0.0), p_reye + tv2, v2(0.0, 0.0), player_depth - 0.003, player_eye_colour, 0, &player_transform);
-    
-    //     self.world_geometry.put_rect_transform(v4(-1.0, 1.0, 2.0, 0.5), v4(0., 0., 1., 1.,), player_depth + 0.01, v4(0., 0., 0., 1.0), 3, &player_transform);
-    // }
-    
     pub fn draw_player_projectiles(&mut self) {
         let projectile_s = 0.05;
 
@@ -183,6 +133,7 @@ impl Game {
                 if vp.norm() < 0.3 {
                     kill = true;
                     self.enemy_hp[enemy_idx] -= self.player_damage;
+                    self.prod.push(Sound { id: 1, birthtime: self.t, elapsed: 0.0, remaining: 0.2, magnitude: 0.1, mag_exp: 0.9995, frequency: 660.0 * 5./6. , freq_exp: 1.0, wait: 0.0, phase: 0.0, samp: 0 }).unwrap();
                 }
             }
 

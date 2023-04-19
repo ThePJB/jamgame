@@ -102,7 +102,7 @@ impl Game {
         // ====================
         // Sound Init
         // ====================
-        let rb = RingBuffer::<Sound>::new(100);
+        let rb = RingBuffer::<Sound>::new(200);
         let (mut prod, mut cons) = rb.split();
         let stream = stream_setup_for(sample_next, cons).expect("no can make stream");
         stream.play().expect("no can play stream");

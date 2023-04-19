@@ -56,7 +56,7 @@ impl Game {
             self.gem_vy[idx] -= self.gem_vy[idx] * dt * fric;
 
             if d < COLLECTION_RADIUS {
-                let freq = 440.0 * 1.5_f32.powf(self.gem_type[idx] as f32);
+                let freq = [440.0, 660.0, 880.0, 880.0*1.5][self.gem_type[idx]];
                 self.prod.push(Sound { id: 1, birthtime: self.t, elapsed: 0.0, remaining: 0.2, magnitude: 0.2, mag_exp: 0.9995, frequency: freq, freq_exp: 1.0, wait: 0.0, phase: 0.0, samp: 0 }).unwrap();
 
                 self.gems += match self.gem_type[idx] {

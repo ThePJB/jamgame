@@ -4,6 +4,8 @@ mod vertex_buffer;
 mod gems;
 mod enemies;
 mod player;
+mod upgrade;
+mod sound;
 use std::env;
 
 

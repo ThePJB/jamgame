@@ -1,5 +1,6 @@
 use crate::game::*;
 use crate::math::*;
+use crate::sound::*;
 
 const COLLECTION_RADIUS: f32 = 0.08;
 

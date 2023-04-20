@@ -15,9 +15,9 @@ pub use std::f32::consts::PI;
 use cpal::traits::*;
 use ringbuf::*;
 
-use crate::gems;
-use crate::enemies;
 use crate::player;
+use crate::upgrade::*;
+use crate::sound::*;
 
 
 pub const LEVEL_W: f32 = 20.0;
@@ -68,6 +68,12 @@ pub struct Game {
     pub player_proj_speed: f32,
 
     pub warp_price: usize,
+    pub reroll_price: usize,
+    pub upgrade_seed: [usize; 3],
+
+    pub upgrade_common: Vec<Upgrade>,
+    pub upgrade_uncommon: Vec<Upgrade>,
+    pub upgrade_rare: Vec<Upgrade>,
 
     pub seed: usize,
     pub level_seed: usize,
@@ -238,6 +244,7 @@ impl Game {
             player_damage: 0.5,
             player_proj_speed: 1.5,
             warp_price: 500,
+            reroll_price: 10,
             held_keys: HashSet::new(),
             screen_geometry: VertexBuffer::default(),
             screen_geometry_unscaled: VertexBuffer::default(),
@@ -245,6 +252,7 @@ impl Game {
             seed: initial_seed,
             enemies_spawn_seed: khash(initial_seed * 1231247),
             level_seed: khash(initial_seed * 129371237),
+            upgrade_seed: [khash(initial_seed * 123237), khash(initial_seed * 9123912397), khash(initial_seed * 231241257)],
             gem_type: vec![],
             gem_x: vec![],
             gem_y: vec![],
@@ -267,6 +275,9 @@ impl Game {
             player_projectile_y: vec![],
             player_projectile_vx: vec![],
             player_projectile_vy: vec![],
+            upgrade_common: upgrade_common(),
+            upgrade_uncommon: upgrade_uncommon(),
+            upgrade_rare: upgrade_rare(),
         }
     }
 
@@ -309,6 +320,19 @@ impl Game {
                                 match code {
                                     VirtualKeyCode::Escape => {
                                     },
+                                    VirtualKeyCode::Key1 => self.handle_upgrade(0),
+                                    VirtualKeyCode::Key2 => self.handle_upgrade(1),
+                                    VirtualKeyCode::Key3 => self.handle_upgrade(2),
+                                    VirtualKeyCode::R => {
+                                        if self.gems >= self.reroll_price {
+                                            self.gems -= self.reroll_price;
+                                            self.upgrade_seed[0] = khash(self.upgrade_seed[0] * 12312541247);
+                                            self.upgrade_seed[1] = khash(self.upgrade_seed[1] * 1231377);
+                                            self.upgrade_seed[2] = khash(self.upgrade_seed[2] * 5438373737);
+                                        } else {
+                                            self.prod.push(fail_sound(self.t)).unwrap();
+                                        }
+                                    },
                                     VirtualKeyCode::T => {
                                         if self.in_portal {
                                             self.in_portal = false;
@@ -321,6 +345,7 @@ impl Game {
                                                 self.gems -= self.warp_price;
                                                 self.in_portal = true;
                                                 self.zero_state();
+                                                self.player_pos = v2(0., 0.);
                                             }
                                         }
                                     },
@@ -361,10 +386,9 @@ impl Game {
         let y_scale = scale;
 
         if self.in_portal {
-            self.screen_geometry_unscaled.put_rect(v4(-1., -1., FNTW/aspect* 8.0, FNTH*8.0), v4(0., 0., 1., 1.), 0.8, v4(0.5, 0.5, 0.5, 0.8), 0);
-
+            let mut y = -1.0 + FNTH;
+            self.screen_geometry_unscaled.put_rect(v4(-1., y, FNTW/aspect* 8.0, FNTH*8.0), v4(0., 0., 1., 1.), 0.8, v4(0.5, 0.5, 0.5, 0.8), 0);
             self.screen_geometry_unscaled.put_rect(v4(-1., -1., 2., 2.), v4(0., 0., 1., 1.,), 0.9, v4(0., 0., 0., 1.), 0);
-            let mut y = -1.0;
             self.screen_geometry_unscaled.put_string_left(&format!("A{}", self.gems),  -1.0, y, FNTW/aspect, FNTH, 0.1, v4(1., 1., 1., 1.)); y += FNTH;
             self.screen_geometry_unscaled.put_string_left(&format!("B{}", self.player_damage),  -1.0, y, FNTW/aspect, FNTH, 0.1, v4(1., 1., 1., 1.)); y += FNTH;
             self.screen_geometry_unscaled.put_string_left(&format!("C{}", self.player_hp_max),  -1.0, y, FNTW/aspect, FNTH, 0.1, v4(1., 1., 1., 1.)); y += FNTH;
@@ -374,13 +398,36 @@ impl Game {
             self.screen_geometry_unscaled.put_string_left(&format!("G{}", self.player_proj_speed),  -1.0, y, FNTW/aspect, FNTH, 0.1, v4(1., 1., 1., 1.)); y += FNTH;
             self.screen_geometry_unscaled.put_string_left(&format!("H{}", self.player_cooldown),  -1.0, y, FNTW/aspect, FNTH, 0.1, v4(1., 1., 1., 1.)); y += FNTH;
 
+            y += FNTH;
+            y += FNTH;
+            y += FNTH;
+            
+            self.screen_geometry_unscaled.put_rect(v4(-1., y, FNTW/aspect* 8.0, FNTH*2.0), v4(0., 0., 1., 1.), 0.8, v4(0.5, 0.5, 0.5, 0.8), 0);
+            self.screen_geometry_unscaled.put_string_left("Z[r]",  -1.0, y, FNTW/aspect, FNTH, 0.1, v4(1., 1., 1., 1.)); y += FNTH;
+            self.screen_geometry_unscaled.put_string_left(&format!("A{}", self.reroll_price),  -1.0, y, FNTW/aspect, FNTH, 0.1, v4(1., 1., 1., 1.)); y += FNTH;
+
+            y += FNTH;
+            self.screen_geometry_unscaled.put_rect(v4(-1., y, FNTW/aspect* 8.0, FNTH*1.0), v4(0., 0., 1., 1.), 0.8, v4(0.5, 0.5, 0.5, 0.8), 0);
+            self.screen_geometry_unscaled.put_string_left("cont.[t]",  -1.0, y, FNTW/aspect, FNTH, 0.1, v4(1., 1., 1., 1.)); y += FNTH;
+            
+            let mut y = FNTH*2.0;
+            let x = -1.0 + FNTW/aspect*9.0;
+            self.screen_geometry_unscaled.put_rect(v4(x, y, FNTW/aspect* 30.0, FNTH*7.0), v4(0., 0., 1., 1.), 0.8, v4(0.5, 0.5, 0.5, 0.8), 0);
+
+            y += FNTH;
+            self.screen_geometry_unscaled.put_string_left("[1] ", x, y, FNTW/aspect, FNTH, 0.1, v4(1., 1., 1., 1.)); self.disp_upgrade(x + 4.0*FNTW/aspect, y, FNTW/aspect, FNTH, 0.8, self.roll_upgrade(self.upgrade_seed[0])); y += FNTH;
+            y += FNTH;
+            self.screen_geometry_unscaled.put_string_left("[2] ", x, y, FNTW/aspect, FNTH, 0.1, v4(1., 1., 1., 1.)); self.disp_upgrade(x + 4.0*FNTW/aspect, y, FNTW/aspect, FNTH, 0.8, self.roll_upgrade(self.upgrade_seed[1])); y += FNTH;
+            y += FNTH;
+            self.screen_geometry_unscaled.put_string_left("[3] ", x, y, FNTW/aspect, FNTH, 0.1, v4(1., 1., 1., 1.)); self.disp_upgrade(x + 4.0*FNTW/aspect, y, FNTW/aspect, FNTH, 0.8, self.roll_upgrade(self.upgrade_seed[2])); y += FNTH;
+            
             // warp zone panel
 
             // spinning player
-            self.draw_player(0., 0., 0.2, self.t, false);
+            self.draw_player(0., 0., 0.1, 3.0*self.t, false);
 
             if self.t % 2.0 < 1.0 {
-                self.screen_geometry_unscaled.put_string_centered("-- warp zone --",  0.0, 1.0-FNTH, FNTW/aspect, FNTH, 0.1, v4(1., 1., 1., 1.));
+                self.screen_geometry_unscaled.put_string_centered("-- warp zone --",  0.0, -1.0, FNTW/aspect, FNTH, 0.1, v4(1., 1., 1., 1.));
             }
 
             // draw cool white lines
@@ -414,7 +461,7 @@ impl Game {
             self.screen_geometry_unscaled.put_string_left(&format!("A{}", self.gems),  -1.0, -1.0 + FNTH, FNTW/aspect, FNTH, 0.1, v4(1., 1., 1., 1.));
             // self.screen_geometry.put_string_left(&format!("hp: {} gems: {}",(self.player_hp * 100.0).round(),  self.gems),  -1.0, -1.0, FNTW, FNTH, 0.1, v4(1., 1., 1., 1.));
             
-            if self.gems > self.warp_price {
+            if self.gems >= self.warp_price {
                     self.screen_geometry_unscaled.put_string_centered(&format!("warp available: A{} [t]", self.warp_price),  0.0, 1.0 - FNTH, FNTW/aspect, FNTH, 0.1, v4(1., 1., 1., 1.));
             }
 
@@ -572,20 +619,7 @@ fn sample_next(o: &mut SampleRequestOptions) -> f32 {
     acc
 }
 
-#[derive(Debug)]
-pub struct Sound {
-    pub id: usize,
-    pub wait: f32,
-    pub birthtime: f32,
-    pub elapsed: f32,
-    pub remaining: f32,
-    pub magnitude: f32,
-    pub mag_exp: f32,
-    pub frequency: f32,
-    pub freq_exp: f32,
-    pub phase: f32,
-    pub samp: u64,
-}
+
 
 pub struct SampleRequestOptions {
     pub sample_rate: f32,

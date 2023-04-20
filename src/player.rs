@@ -1,5 +1,6 @@
 use crate::game::*;
 use crate::math::*;
+use crate::sound::*;
 use glutin::event::VirtualKeyCode;
 
 

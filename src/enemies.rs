@@ -1,5 +1,6 @@
 use crate::game::*;
 use crate::math::*;
+use crate::sound::*;
 
 // draw flat so doesnt look all fucked up
 // larger, more sinister eye

@@ -57,13 +57,13 @@ pub fn upgrade_common() -> Vec<Upgrade> {
 pub fn upgrade_uncommon() -> Vec<Upgrade> {
     vec![
         Upgrade {
-            add: [-300.0, 0.0, 0.2, 0.01, 0., 0., 0., 0.],
-            mul: [1.0, 0.6, 1.0, 1.0, 1.0, 1.0, 0.5, 1.0],
+            add: [-300.0, 0.0, 0.0, 0.00, 0., 0., 0., 0.],
+            mul: [1.0, 0.6, 1.0, 1.0, 1.0, 1.0, 1.0, 0.5],
             name: "rapidfire".to_string(),
             rarity: 1,
         },
         Upgrade {
-            add: [-200.0, 0.0, 0.2, 0.01, 0., 0., 0., 0.],
+            add: [-200.0, 0.0, 0.0, 0.00, 0., 0., 0., 0.],
             mul: [1.0, 2.0, 1.0, 1.0, 1.0, 1.0, 1.9, 1.5],
             name: "powerful".to_string(),
             rarity: 1,
@@ -74,8 +74,8 @@ pub fn upgrade_uncommon() -> Vec<Upgrade> {
 pub fn upgrade_rare() -> Vec<Upgrade> {
     vec![
         Upgrade {
-            add: [-500.0, 0.00, 0.00, 0.00, 0., 0., 0., 0.],
-            mul: [1.0, 3.0, 0.01, 1., 1., 1., 1., 1.],
+            add: [-500.0, 0.00, 0.01, 0.00, 0., 0., 0., 0.],
+            mul: [1.0, 3.0, 0.00, 1., 1., 1., 1., 1.],
             name: "samurai".to_string(),
             rarity: 2,
         },
@@ -90,10 +90,10 @@ pub fn upgrade_rare() -> Vec<Upgrade> {
 
 impl Game {
     pub fn roll_upgrade(&self, seed: usize) -> Upgrade {
-        let roll = khash(seed) % (self.upgrade_common.len());
-        if roll > self.upgrade_common.len() {
+        let roll = khash(seed) % (self.upgrade_common.len() + 1);
+        if roll >= self.upgrade_common.len() {
             let roll = khash(seed) % (self.upgrade_uncommon.len());
-            if roll > self.upgrade_uncommon.len() {
+            if roll >= self.upgrade_uncommon.len() {
                 let roll = khash(seed) % (self.upgrade_rare.len() - 1);
                 return self.upgrade_rare[roll].clone();
             }
@@ -120,13 +120,14 @@ impl Game {
         }
     }
     pub fn handle_upgrade(&mut self, selection: usize) {
+        if !self.in_portal {return;}
         let u = self.roll_upgrade(self.upgrade_seed[selection]);
         if (self.gems as i64 + u.add[0] as i64) < 0 {
             println!("too poor");
             self.prod.push(fail_sound(self.t)).unwrap();
             return;
         }
-        self.upgrade_seed[selection] = khash(self.upgrade_seed[selection] + 1231237 * 12312231667);
+        self.upgrade_seed[selection] = 123179273 * khash(self.upgrade_seed[selection] + 1231237 * 12312231667) + 1231294147;
         for i in 0..8 {
             self.do_stat_apply(i, u.mul[i], u.add[i]);
         }

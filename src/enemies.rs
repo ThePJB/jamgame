@@ -73,7 +73,7 @@ impl Game {
                     self.enemy_type.push(0);
                     self.enemy_birth_t.push(self.t);
                     self.enemy_attack_t.push(self.t);
-                    self.enemy_hp.push(1.0);
+                    self.enemy_hp.push(3.5);
                 }
             }
         }
@@ -153,7 +153,7 @@ impl Game {
             if vp.norm() < 0.2 {
                 self.prod.push(Sound { id: 1, birthtime: self.t, elapsed: 0.0, remaining: 0.4, magnitude: 0.1, mag_exp: 0.9999, frequency: 130.0, freq_exp: 1.0, wait: 0.0, phase: 0.0, samp: 0 }).unwrap();
                 self.prod.push(Sound { id: 1, birthtime: self.t, elapsed: 0.0, remaining: 0.4, magnitude: 0.1, mag_exp: 0.9999, frequency: 140.0, freq_exp: 1.0, wait: 0.0, phase: 0.0, samp: 0 }).unwrap();
-                self.player_hp -= 0.1;
+                self.player_hp -= 0.2;
                 kill = true;
             }
             

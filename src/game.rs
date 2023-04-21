@@ -214,23 +214,27 @@ impl Game {
         let initial_seed = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_nanos() as usize;
 
         Game {
-            xres,
-            yres,
-            window,
-            gl,
-            stream,
-            prod,
-            mouse_pos: v2(0., 0.),
-            aim: v2(0., 0.),
-            lmb: false,
-            lmb_this_frame: false,
-            t: 0.0,
-            t_level: 0.0,
-            t_last: Instant::now(),
             program,
             vao,
             vbo,
             texture,
+            xres,
+            yres,
+            window,
+            gl,
+            screen_geometry: VertexBuffer::default(),
+            screen_geometry_unscaled: VertexBuffer::default(),
+            world_geometry: VertexBuffer::default(),
+            stream,
+            prod,
+            held_keys: HashSet::new(),
+            mouse_pos: v2(0., 0.),
+            aim: v2(0., 0.),
+            lmb: false,
+            lmb_this_frame: false,
+            t_last: Instant::now(),
+            t: 0.0,
+            t_level: 0.0,
             in_portal: false,
             player_pos: v2(0., 0.),
             player_vel: v2(0., 0.),
@@ -243,12 +247,8 @@ impl Game {
             player_cooldown: 0.7,
             player_damage: 0.5,
             player_proj_speed: 1.5,
-            warp_price: 500,
+            warp_price: 100,
             reroll_price: 10,
-            held_keys: HashSet::new(),
-            screen_geometry: VertexBuffer::default(),
-            screen_geometry_unscaled: VertexBuffer::default(),
-            world_geometry: VertexBuffer::default(),
             seed: initial_seed,
             enemies_spawn_seed: khash(initial_seed * 1231247),
             level_seed: khash(initial_seed * 129371237),
@@ -258,7 +258,7 @@ impl Game {
             gem_y: vec![],
             gem_vx: vec![],
             gem_vy: vec![],
-            gems: 500,
+            gems: 0,
             spawn_enemies_counter: 0.0,
             enemy_x: vec![],
             enemy_y: vec![],
@@ -314,6 +314,9 @@ impl Game {
                         match input {
                             glutin::event::KeyboardInput {virtual_keycode: Some(code), state: ElementState::Pressed, ..} => {
                                 self.held_keys.insert(code);
+                                if self.player_hp < 0.0 {
+                                    self.restart();
+                                }
                             },
                             glutin::event::KeyboardInput {virtual_keycode: Some(code), state: ElementState::Released, ..} => {
                                 self.held_keys.remove(&code);
@@ -324,13 +327,15 @@ impl Game {
                                     VirtualKeyCode::Key2 => self.handle_upgrade(1),
                                     VirtualKeyCode::Key3 => self.handle_upgrade(2),
                                     VirtualKeyCode::R => {
-                                        if self.gems >= self.reroll_price {
-                                            self.gems -= self.reroll_price;
-                                            self.upgrade_seed[0] = khash(self.upgrade_seed[0] * 12312541247);
-                                            self.upgrade_seed[1] = khash(self.upgrade_seed[1] * 1231377);
-                                            self.upgrade_seed[2] = khash(self.upgrade_seed[2] * 5438373737);
-                                        } else {
-                                            self.prod.push(fail_sound(self.t)).unwrap();
+                                        if self.in_portal {
+                                            if self.gems >= self.reroll_price {
+                                                self.gems -= self.reroll_price;
+                                                self.upgrade_seed[0] = khash(self.upgrade_seed[0] * 12312541247);
+                                                self.upgrade_seed[1] = khash(self.upgrade_seed[1] * 1231377);
+                                                self.upgrade_seed[2] = khash(self.upgrade_seed[2] * 5438373737);
+                                            } else {
+                                                self.prod.push(fail_sound(self.t)).unwrap();
+                                            }
                                         }
                                     },
                                     VirtualKeyCode::T => {
@@ -340,6 +345,7 @@ impl Game {
                                             self.t_level = 0.0;
                                             // regen gems etc
                                             self.level_seed = khash(self.level_seed * 12412317);
+                                            self.populate_with_gems();
                                         } else {
                                             if self.gems >= self.warp_price {
                                                 self.gems -= self.warp_price;
@@ -375,7 +381,7 @@ impl Game {
 
         let aspect = self.xres as f32 / self.yres as f32;
 
-        if !self.in_portal {
+        if !self.in_portal && self.player_hp > 0.0 {
             self.simulate(dt);
         }
 
@@ -384,6 +390,13 @@ impl Game {
         let scale = 1.0;
         let x_scale = scale/aspect;   // either this or 1/aspect
         let y_scale = scale;
+
+        if self.player_hp <= 0.0 {
+            println!("you are dead");
+            self.screen_geometry_unscaled.put_string_centered("-- you have died --",  0.0, 0.0, FNTW/aspect, FNTH, 0.1, v4(1., 1., 1., 1.));
+            self.screen_geometry_unscaled.put_string_centered("press any key to restart",  0.0, FNTH, FNTW/aspect, FNTH, 0.1, v4(1., 1., 1., 1.));
+
+        }
 
         if self.in_portal {
             let mut y = -1.0 + FNTH;
@@ -536,22 +549,48 @@ impl Game {
         self.world_geometry.put_rect(v4(-LEVEL_W/2.0, -LEVEL_H/2.0, LEVEL_W, LEVEL_H,), v4(0., 0., 1., 1.), 0.9, world_colour, 0);
     }    
 
+    pub fn restart(&mut self) {
+        self.player_pos = v2(0., 0.);
+        self.player_vel = v2(0., 0.);
+        self.player_succ = 0.5;
+        self.player_hp = 1.0;
+        self.player_hp_max = 1.0;
+        self.player_hp_regen = 0.01;
+        self.player_speed = 0.5;
+        self.player_t_shoot = -999.0;
+        self.player_cooldown = 0.7;
+        self.player_damage = 0.5;
+        self.player_proj_speed = 1.5;
+        self.gems = 0;
+        self.warp_price = 500;
+        self.reroll_price = 10;
+        self.seed = khash(self.seed + 1231237197);
+        self.enemies_spawn_seed = khash(self.enemies_spawn_seed * 1231247 + 12312317);
+        self.level_seed = khash(self.level_seed * 129371237 + 231417);
+        self.zero_state();
+    }
+
     pub fn zero_state(&mut self) {
-        self.enemy_x = vec![];
-        self.enemy_y = vec![];
-        self.enemy_type = vec![];
-        self.enemy_birth_t = vec![];
-        self.enemy_attack_t = vec![];
-        self.enemy_hp = vec![];
-        self.enemy_projectile_x = vec![];
-        self.enemy_projectile_y = vec![];
-        self.enemy_projectile_vx = vec![];
-        self.enemy_projectile_vy =  vec![];
-        self.enemy_projectile_type = vec![];
-        self.player_projectile_x = vec![];
-        self.player_projectile_y = vec![];
-        self.player_projectile_vx = vec![];
-        self.player_projectile_vy = vec![];
+        self.enemy_x.clear();
+        self.enemy_y.clear();
+        self.enemy_type.clear();
+        self.enemy_birth_t.clear();
+        self.enemy_attack_t.clear();
+        self.enemy_hp.clear();
+        self.enemy_projectile_x.clear();
+        self.enemy_projectile_y.clear();
+        self.enemy_projectile_vx.clear();
+        self.enemy_projectile_vy .clear();
+        self.enemy_projectile_type.clear();
+        self.player_projectile_x.clear();
+        self.player_projectile_y.clear();
+        self.player_projectile_vx.clear();
+        self.player_projectile_vy.clear();
+        self.gem_x.clear();
+        self.gem_y.clear();
+        self.gem_vx.clear();
+        self.gem_vy.clear();
+        self.gem_type.clear();
     }
 }
 
@@ -703,3 +742,12 @@ where
         }
     }
 }
+
+
+
+// move this audio shit away
+// warp out
+// warp in
+// shop
+// shop sfx
+// shop music etc

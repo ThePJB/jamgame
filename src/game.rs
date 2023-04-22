@@ -568,6 +568,7 @@ impl Game {
         self.enemies_spawn_seed = khash(self.enemies_spawn_seed * 1231247 + 12312317);
         self.level_seed = khash(self.level_seed * 129371237 + 231417);
         self.zero_state();
+        self.populate_with_gems();
     }
 
     pub fn zero_state(&mut self) {
